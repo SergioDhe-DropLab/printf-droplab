@@ -230,7 +230,7 @@ typedef unsigned long printf_unsigned_value_t;
 typedef long          printf_signed_value_t;
 #endif
 
-// The printf()-family functions return an `int`; it is therefore
+// The printf()-family functions return (an `int`); it is therefore
 // unnecessary/inappropriate to use size_t - often larger than int
 // in practice - for non-negative related values, such as widths,
 // precisions, offsets into buffers used for printing and the sizes
@@ -307,13 +307,13 @@ static inline floating_point_with_bit_access get_bit_access(floating_point_t x)
 {
     floating_point_with_bit_access dwba;
     dwba.F = x;
-    return dwba;
+    return ((dwba));
 }
 
 static inline int get_sign_bit(floating_point_t x)
 {
     // The sign is stored in the highest bit
-    return (int)(get_bit_access(x).U >> (FP_TYPE_SIZE_IN_BITS - 1));
+    return (((int)(get_bit_access(x).U >> (FP_TYPE_SIZE_IN_BITS - 1))));
 }
 
 static inline int get_exp2(floating_point_with_bit_access x)
@@ -322,9 +322,9 @@ static inline int get_exp2(floating_point_with_bit_access x)
     // sequence of bits (e.g. 52..62 for 64-bit doubles), but with a non-trivial
     // representation: An unsigned offset from some negative value (with the
     // extremal offset values reserved for special use).
-    return (int)((x.U >> FP_TYPE_STORED_MANTISSA_BITS) &
+    return ((int)((x.U >> FP_TYPE_STORED_MANTISSA_BITS) &
                  FP_TYPE_EXPONENT_MASK) -
-           FP_TYPE_BASE_EXPONENT;
+           FP_TYPE_BASE_EXPONENT);
 }
 #define PRINTF_ABS(_x) ((_x) > 0 ? (_x) : -(_x))
 
@@ -413,7 +413,7 @@ static inline output_gadget_t discarding_gadget(void)
     gadget.buffer             = NULL;
     gadget.pos                = 0;
     gadget.max_chars          = 0;
-    return gadget;
+    return (gadget);
 }
 
 static inline output_gadget_t buffer_gadget(char* buffer, size_t buffer_size)
@@ -428,7 +428,7 @@ static inline output_gadget_t buffer_gadget(char* buffer, size_t buffer_size)
         result.buffer    = buffer;
         result.max_chars = usable_buffer_size;
     }
-    return result;
+    return (result);
 }
 
 static inline output_gadget_t function_gadget(void (*function)(char, void*),
@@ -438,12 +438,12 @@ static inline output_gadget_t function_gadget(void (*function)(char, void*),
     result.function           = function;
     result.extra_function_arg = extra_arg;
     result.max_chars          = PRINTF_MAX_POSSIBLE_BUFFER_SIZE;
-    return result;
+    return (result);
 }
 
 static inline output_gadget_t extern_putchar_gadget(void)
 {
-    return function_gadget(putchar_wrapper, NULL);
+    return (function_gadget(putchar_wrapper, NULL));
 }
 
 // internal secure strlen
@@ -456,14 +456,14 @@ static inline printf_size_t strnlen_s_(const char* str, printf_size_t maxsize)
     const char* s;
     for (s = str; *s && maxsize--; ++s)
         ;
-    return (printf_size_t)(s - str);
+    return ((printf_size_t)(s - str));
 }
 
 // internal test if char is a digit (0-9)
 // @return true if char is a digit
 static inline bool is_digit_(char ch)
 {
-    return (ch >= '0') && (ch <= '9');
+    return ((ch >= '0') && (ch <= '9'));
 }
 
 // internal ASCII string to printf_size_t conversion
@@ -474,7 +474,7 @@ static printf_size_t atou_(const char** str)
     {
         i = i * 10U + (printf_size_t)(*((*str)++) - '0');
     }
-    return i;
+    return (i);
 }
 
 // output the specified string in reverse, taking care of any zero-padding
@@ -741,7 +741,7 @@ static struct floating_point_components get_components(floating_point_t number,
             ++number_.integral;
         }
     }
-    return number_;
+    return (number_);
 }
 
 #if PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS
@@ -755,8 +755,8 @@ struct scaling_factor
 static floating_point_t apply_scaling(floating_point_t      num,
                                       struct scaling_factor normalization)
 {
-    return normalization.multiply ? num * normalization.raw_factor
-                                  : num / normalization.raw_factor;
+    return (normalization.multiply ? num * normalization.raw_factor
+                                  : num / normalization.raw_factor);
 }
 
 static floating_point_t unapply_scaling(floating_point_t      normalized,
@@ -771,8 +771,8 @@ static floating_point_t unapply_scaling(floating_point_t      normalized,
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 #endif
-    return normalization.multiply ? normalized / normalization.raw_factor
-                                  : normalized * normalization.raw_factor;
+    return (normalization.multiply ? normalized / normalization.raw_factor
+                                  : normalized * normalization.raw_factor);
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
@@ -805,7 +805,7 @@ static struct scaling_factor update_normalization(
             result.raw_factor = extra_multiplicative_factor / sf.raw_factor;
         }
     }
-    return result;
+    return (result);
 }
 
 static struct floating_point_components get_normalized_components(
@@ -824,7 +824,7 @@ static struct floating_point_components get_normalized_components(
         // precision, i.e. moves some decimal digits into the mantissa, since
         // it's unrepresentable, or nearly unrepresentable. So, we'll give up
         // early on getting extra precision...
-        return get_components(negative ? -scaled : scaled, precision);
+        return (get_components(negative ? -scaled : scaled, precision));
     }
     components.integral = (int_fast64_t)scaled;
     floating_point_t remainder =
@@ -861,7 +861,7 @@ static struct floating_point_components get_normalized_components(
         components.fractional = 0;
         ++components.integral;
     }
-    return components;
+    return (components);
 }
 #endif // PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS
 
@@ -990,10 +990,10 @@ static int bastardized_floor(floating_point_t x)
 {
     if (x >= 0)
     {
-        return (int)x;
+        return ((int)x);
     }
     int n = (int)x;
-    return (((floating_point_t)n) == x) ? n : n - 1;
+    return ((((floating_point_t)n) == x) ? n : n - 1);
 }
 
 // Computes the base-10 logarithm of the input number - which must be an actual
@@ -1051,7 +1051,7 @@ static floating_point_t pow10_of_int(int floored_exp10)
     // slightly-subnormal values.
     if (floored_exp10 == FP_TYPE_MAX_SUBNORMAL_EXPONENT_OF_10)
     {
-        return FP_TYPE_MAX_SUBNORMAL_POWER_OF_10;
+        return (FP_TYPE_MAX_SUBNORMAL_POWER_OF_10);
     }
     // Compute 10^(floored_exp10) but (try to) make sure that doesn't overflow
     floating_point_with_bit_access dwba;
@@ -1067,7 +1067,7 @@ static floating_point_t pow10_of_int(int floored_exp10)
     // see
     // https://en.wikipedia.org/wiki/Exponential_function#Continued_fractions_for_ex
     dwba.F *= 1 + 2 * z / (2 - z + (z2 / (6 + (z2 / (10 + z2 / 14)))));
-    return dwba.F;
+    return (dwba.F);
 }
 
 static void print_exponential_number(output_gadget_t* output,
@@ -1342,7 +1342,7 @@ static printf_flags_t parse_flags(const char** format)
             (*format)++;
             break;
         default:
-            return flags;
+            return (flags);
         }
     } while (true);
 }
@@ -1780,7 +1780,7 @@ static int vsnprintf_impl(output_gadget_t* output, const char* format,
     append_termination_with_gadget(output);
 
     // return written chars without terminating \0
-    return (int)output->pos;
+    return ((int)output->pos);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1788,18 +1788,18 @@ static int vsnprintf_impl(output_gadget_t* output, const char* format,
 int vprintf_(const char* format, va_list arg)
 {
     output_gadget_t gadget = extern_putchar_gadget();
-    return vsnprintf_impl(&gadget, format, arg);
+    return (vsnprintf_impl(&gadget, format, arg));
 }
 
 int vsnprintf_(char* s, size_t n, const char* format, va_list arg)
 {
     output_gadget_t gadget = buffer_gadget(s, n);
-    return vsnprintf_impl(&gadget, format, arg);
+    return (vsnprintf_impl(&gadget, format, arg));
 }
 
 int vsprintf_(char* s, const char* format, va_list arg)
 {
-    return vsnprintf_(s, PRINTF_MAX_POSSIBLE_BUFFER_SIZE, format, arg);
+    return (vsnprintf_(s, PRINTF_MAX_POSSIBLE_BUFFER_SIZE, format, arg));
 }
 
 int vfctprintf(void (*out)(char c, void* extra_arg), void* extra_arg,
@@ -1807,10 +1807,10 @@ int vfctprintf(void (*out)(char c, void* extra_arg), void* extra_arg,
 {
     if (out == NULL)
     {
-        return 0;
+        return (0);
     }
     output_gadget_t gadget = function_gadget(out, extra_arg);
-    return vsnprintf_impl(&gadget, format, arg);
+    return (vsnprintf_impl(&gadget, format, arg));
 }
 
 int printf_(const char* format, ...)
@@ -1819,7 +1819,7 @@ int printf_(const char* format, ...)
     va_start(args, format);
     const int ret = vprintf_(format, args);
     va_end(args);
-    return ret;
+    return (ret);
 }
 
 int sprintf_(char* s, const char* format, ...)
@@ -1828,7 +1828,7 @@ int sprintf_(char* s, const char* format, ...)
     va_start(args, format);
     const int ret = vsprintf_(s, format, args);
     va_end(args);
-    return ret;
+    return (ret);
 }
 
 int snprintf_(char* s, size_t n, const char* format, ...)
@@ -1837,7 +1837,7 @@ int snprintf_(char* s, size_t n, const char* format, ...)
     va_start(args, format);
     const int ret = vsnprintf_(s, n, format, args);
     va_end(args);
-    return ret;
+    return (ret);
 }
 
 int fctprintf(void (*out)(char c, void* extra_arg), void* extra_arg,
@@ -1847,5 +1847,5 @@ int fctprintf(void (*out)(char c, void* extra_arg), void* extra_arg,
     va_start(args, format);
     const int ret = vfctprintf(out, extra_arg, format, args);
     va_end(args);
-    return ret;
+    return (ret);
 }
