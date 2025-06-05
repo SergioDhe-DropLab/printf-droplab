@@ -322,9 +322,9 @@ static inline int get_exp2(floating_point_with_bit_access x)
     // sequence of bits (e.g. 52..62 for 64-bit doubles), but with a non-trivial
     // representation: An unsigned offset from some negative value (with the
     // extremal offset values reserved for special use).
-    return ((int)((x.U >> FP_TYPE_STORED_MANTISSA_BITS) &
-                 FP_TYPE_EXPONENT_MASK) -
-           FP_TYPE_BASE_EXPONENT);
+    return (
+        (int)((x.U >> FP_TYPE_STORED_MANTISSA_BITS) & FP_TYPE_EXPONENT_MASK) -
+        FP_TYPE_BASE_EXPONENT);
 }
 #define PRINTF_ABS(_x) ((_x) > 0 ? (_x) : -(_x))
 
@@ -756,7 +756,7 @@ static floating_point_t apply_scaling(floating_point_t      num,
                                       struct scaling_factor normalization)
 {
     return (normalization.multiply ? num * normalization.raw_factor
-                                  : num / normalization.raw_factor);
+                                   : num / normalization.raw_factor);
 }
 
 static floating_point_t unapply_scaling(floating_point_t      normalized,
@@ -772,7 +772,7 @@ static floating_point_t unapply_scaling(floating_point_t      normalized,
 #endif
 #endif
     return (normalization.multiply ? normalized / normalization.raw_factor
-                                  : normalized * normalization.raw_factor);
+                                   : normalized * normalization.raw_factor);
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
