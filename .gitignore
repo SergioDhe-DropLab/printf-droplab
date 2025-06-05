@@ -1,13 +1,13 @@
 syntax: glob
 
 # Temporary, cache, swap files
-\#\#* 
+\#\#*
 *.swp
 *.bkp
 
 # Files which "ask" to be hidden
 *~
-.*
+# .*  - Hides clang-format
 !.github
 unused/
 
