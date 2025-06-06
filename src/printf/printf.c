@@ -98,7 +98,13 @@
 // Default precision for the floating point conversion specifiers (the C
 // standard sets this at 6)
 #ifndef PRINTF_DEFAULT_FLOAT_PRECISION
-#define PRINTF_DEFAULT_FLOAT_PRECISION 6
+
+#if (PRINTF_USE_FIXED_POINT)
+#define PRINTF_DEFAULT_FLOAT_PRECISION (PRINTF_FIX_MAX_PRECISION)
+#else
+#define PRINTF_DEFAULT_FLOAT_PRECISION (6)
+#endif
+
 #endif
 
 // Default choice of type to use for internal floating-point computations
@@ -244,7 +250,10 @@ typedef unsigned int printf_size_t;
 // trailing '\0'.
 
 #if (PRINTF_SUPPORT_DECIMAL_SPECIFIERS || PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS)
+
+#if (!PRINTF_USE_FIXED_POINT)
 #include <float.h>
+
 #if FLT_RADIX != 2
 #error "Non-binary-radix floating-point types are unsupported."
 #endif
@@ -263,13 +272,27 @@ typedef float    floating_point_t;
 #define FP_TYPE_MANT_DIG FLT_MANT_DIG
 #endif
 
-#if PRINTF_USE_FIXED_POINT
+#else // (PRINTF_USE_FIXED_POINT)
+
 #ifndef fix16_t
 typedef int32_t fix16_t;
+#endif
+
+#define PRINTF_FIX_MAX_PRECISION (5)
+
+#if (PRINTF_USE_DOUBLE_INTERNALLY || PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS)
+#error "Invalid configuration for fixed-point usage."
 #endif
 #endif
 
 #define NUM_DECIMAL_DIGITS_IN_INT64_T 18
+
+// Note: This value does not mean that all floating-point values printed with
+// the library will be correct up to this precision; it is just an upper-bound
+// for avoiding buffer overruns and such
+#define PRINTF_MAX_SUPPORTED_PRECISION (NUM_DECIMAL_DIGITS_IN_INT64_T - 1)
+
+#if (!PRINTF_USE_FIXED_POINT)
 
 #if FP_TYPE_MANT_DIG == 24
 
@@ -335,6 +358,8 @@ static inline int get_exp2(floating_point_with_bit_access x)
         FP_TYPE_BASE_EXPONENT);
 }
 #define PRINTF_ABS(_x) ((_x) > 0 ? (_x) : -(_x))
+
+#endif //(!PRINTF_USE_FIXED_POINT)
 
 #endif // (PRINTF_SUPPORT_DECIMAL_SPECIFIERS ||
        // PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS)
@@ -672,7 +697,7 @@ static void print_integer(output_gadget_t*        output,
 
 // Stores a fixed-precision representation of a floating-point number relative
 // to a fixed precision (which cannot be determined by examining this structure)
-struct floating_point_components
+struct flt_components_t
 {
     int_fast64_t integral;
     int_fast64_t fractional;
@@ -680,6 +705,8 @@ struct floating_point_components
     // value, scaled by the precision value
     bool is_negative;
 };
+
+#if (!PRINTF_USE_FIXED_POINT)
 
 static const floating_point_t
     powers_of_10[PRINTF_MAX_PRECOMPUTED_POWER_OF_10 + 1] = {1e00,
@@ -705,22 +732,18 @@ static const floating_point_t
 #endif
 };
 
-// Note: This value does not mean that all floating-point values printed with
-// the library will be correct up to this precision; it is just an upper-bound
-// for avoiding buffer overruns and such
-#define PRINTF_MAX_SUPPORTED_PRECISION (NUM_DECIMAL_DIGITS_IN_INT64_T - 1)
-
-// Break up a floating-point number - which is known to be a finite non-negative
-// number - into its base-10 parts: integral - before the decimal point, and
-// fractional - after it. Taken the precision into account, but does not change
-// it even internally.
-static struct floating_point_components get_components(floating_point_t number,
-                                                       printf_size_t precision)
+// Break up a floating-point number into its base-10 parts: integral - before
+// the decimal point, and fractional - after it. Taken the precision into
+// account, but does not change it even internally.
+static struct flt_components_t get_flt_components(floating_point_t number,
+                                                  printf_size_t    precision)
 {
-    struct floating_point_components number_;
+    struct flt_components_t number_;
     number_.is_negative         = get_sign_bit(number);
+
     floating_point_t abs_number = (number_.is_negative) ? -number : number;
     number_.integral            = (int_fast64_t)abs_number;
+
     floating_point_t scaled_remainder =
         (abs_number - (floating_point_t)number_.integral) *
         powers_of_10[precision];
@@ -758,6 +781,72 @@ static struct floating_point_components get_components(floating_point_t number,
             ++number_.integral;
         }
     }
+    return (number_);
+}
+
+#endif // (!PRINTF_USE_FIXED_POINT)
+
+// Break up a floating-point number - which is known to be a finite non-negative
+// number - into its base-10 parts: integral - before the decimal point, and
+// fractional - after it. Taken the precision into account, but does not change
+// it even internally.
+static struct flt_components_t get_fix16_components(fix16_t       number,
+                                                    printf_size_t precision)
+{
+    struct flt_components_t number_      = {0};
+    uint32_t                negative_bit = (uint32_t)number & 0x80000000U;
+
+    fix16_t                 number_abs   = number;
+    if (negative_bit != 0)
+    {
+        number_.is_negative = true;
+        number_abs *= (fix16_t)-1;
+    }
+
+    uint16_t intpart = (uint32_t)number_abs >> 16U;
+    intpart &= 0x7FFF;
+    uint16_t fracpart = number_abs & 0xFFFFU;
+
+    /* 5 decimals is enough for full fix16_t precision */
+    static const uint32_t scales[6] = {1U, 10U, 100U, 1000U, 10000U, 100000U};
+
+    uint32_t              scale     = scales[precision & 7];
+
+    // fracpart = (uint32_t)fix16_mul((fix16_t)fracpart, (fix16_t)(scale));
+    number_.fractional = (int_fast64_t)(fracpart * scale);
+    uint16_t remainder = number_.fractional & 0xFFFFU;
+    number_.fractional >>= 16;
+
+    if (remainder >= 0x8000)
+    {
+        ++number_.fractional;
+
+        if (number_.fractional >= scale)
+        {
+            /* Handle carry from decimal part */
+            intpart++;
+            number_.fractional -= scale;
+        }
+    }
+    // else if ((remainder == one_half) && (number_.fractional & 1U))
+    // {
+    //     // Banker's rounding, i.e. round half to even:
+    //     // 1.5 -> 2, but 2.5 -> 2
+    //     ++number_.fractional;
+    // }
+
+    number_.integral = (int_fast64_t)intpart;
+
+    // if (precision == 0U)
+    // {
+    //     remainder = abs_number - (floating_point_t)number_.integral;
+    //     if ((remainder == one_half) && (number_.integral & 1U))
+    //     {
+    //         // Banker's rounding, i.e. round half to even:
+    //         // 1.5 -> 2, but 2.5 -> 2
+    //         ++number_.integral;
+    //     }
+    // }
     return (number_);
 }
 
@@ -825,11 +914,11 @@ static struct scaling_factor update_normalization(
     return (result);
 }
 
-static struct floating_point_components get_normalized_components(
+static struct flt_components_t get_normalized_components(
     bool negative, printf_size_t precision, floating_point_t non_normalized,
     struct scaling_factor normalization, int floored_exp10)
 {
-    struct floating_point_components components;
+    struct flt_components_t components;
     components.is_negative  = negative;
     floating_point_t scaled = apply_scaling(non_normalized, normalization);
 
@@ -841,7 +930,7 @@ static struct floating_point_components get_normalized_components(
         // precision, i.e. moves some decimal digits into the mantissa, since
         // it's unrepresentable, or nearly unrepresentable. So, we'll give up
         // early on getting extra precision...
-        return (get_components(negative ? -scaled : scaled, precision));
+        return (get_flt_components(negative ? -scaled : scaled, precision));
     }
     components.integral = (int_fast64_t)scaled;
     floating_point_t remainder =
@@ -882,9 +971,9 @@ static struct floating_point_components get_normalized_components(
 }
 #endif // PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS
 
-static void print_broken_up_decimal(struct floating_point_components number_,
-                                    output_gadget_t*                 output,
-                                    printf_size_t                    precision,
+static void print_broken_up_decimal(struct flt_components_t number_,
+                                    output_gadget_t*        output,
+                                    printf_size_t           precision,
                                     printf_size_t width, printf_flags_t flags,
                                     char* buf, printf_size_t len)
 {
@@ -988,6 +1077,8 @@ static void print_broken_up_decimal(struct floating_point_components number_,
     out_rev_(output, buf, len, width, flags);
 }
 
+#if (!PRINTF_USE_FIXED_POINT)
+
 // internal ftoa for fixed decimal floating point
 static void print_decimal_number(output_gadget_t* output,
                                  floating_point_t number,
@@ -995,9 +1086,23 @@ static void print_decimal_number(output_gadget_t* output,
                                  printf_flags_t flags, char* buf,
                                  printf_size_t len)
 {
-    struct floating_point_components value_ = get_components(number, precision);
+    struct flt_components_t value_ = get_flt_components(number, precision);
     print_broken_up_decimal(value_, output, precision, width, flags, buf, len);
 }
+
+#else
+
+// internal ftoa for fixed decimal floating point
+static void print_decimal_fix16(output_gadget_t* output, fix16_t number,
+                                printf_size_t precision, printf_size_t width,
+                                printf_flags_t flags, char* buf,
+                                printf_size_t len)
+{
+    struct flt_components_t value_ = get_fix16_components(number, precision);
+    print_broken_up_decimal(value_, output, precision, width, flags, buf, len);
+}
+
+#endif
 
 #if PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS
 
@@ -1176,9 +1281,9 @@ static void print_exponential_number(output_gadget_t* output,
 #endif
     bool should_skip_normalization =
         (fall_back_to_decimal_only_mode || floored_exp10 == 0);
-    struct floating_point_components decimal_part_components =
+    struct flt_components_t decimal_part_components =
         should_skip_normalization
-            ? get_components(negative ? -abs_number : abs_number, precision)
+            ? get_flt_components(negative ? -abs_number : abs_number, precision)
             : get_normalized_components(negative, precision, abs_number,
                                         normalization, floored_exp10);
 
@@ -1261,6 +1366,7 @@ static void print_exponential_number(output_gadget_t* output,
 }
 #endif // PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS
 
+#if (!PRINTF_USE_FIXED_POINT)
 static void print_floating_point(output_gadget_t* output,
                                  floating_point_t value,
                                  printf_size_t precision, printf_size_t width,
@@ -1326,10 +1432,15 @@ static void print_floating_point(output_gadget_t* output,
         print_decimal_number(output, value, precision, width, flags, buf, len);
 }
 
+#endif // (!PRINTF_USE_FIXED_POINT)
+
 static void print_fixed_point(output_gadget_t* output, fix16_t value,
                               printf_size_t precision, printf_size_t width,
                               printf_flags_t flags)
 {
+    char          buf[PRINTF_DECIMAL_BUFFER_SIZE];
+    printf_size_t len = 0U;
+
     // Print overflow
     if (value == FIXMATH_OVERFLOW)
     {
@@ -1337,11 +1448,28 @@ static void print_fixed_point(output_gadget_t* output, fix16_t value,
         return;
     }
 
-    char     buf[PRINTF_DECIMAL_BUFFER_SIZE];
+    // set default precision, if not set explicitly
+    if (!(flags & FLAGS_PRECISION))
+    {
+        precision = PRINTF_DEFAULT_FLOAT_PRECISION;
+    }
 
-    uint32_t len = fix16_to_str(value, buf, precision);
+    if (precision > PRINTF_FIX_MAX_PRECISION)
+    {
+        precision = PRINTF_FIX_MAX_PRECISION;
+    }
 
-    out_rev_(output, buf, len, width, flags);
+    // limit precision so that our integer holding the fractional part does
+    // not overflow
+    while ((len < PRINTF_DECIMAL_BUFFER_SIZE) &&
+           (precision > PRINTF_MAX_SUPPORTED_PRECISION))
+    {
+        buf[len++] = '0'; // This respects the precision in terms of result
+                          // length only
+        precision--;
+    }
+
+    print_decimal_fix16(output, value, precision, width, flags, buf, len);
 }
 
 #endif // (PRINTF_SUPPORT_DECIMAL_SPECIFIERS ||
