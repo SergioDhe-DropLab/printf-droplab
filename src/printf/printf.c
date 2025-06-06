@@ -283,6 +283,7 @@ typedef float    floating_point_t;
 typedef int32_t fix16_t;
 #endif
 
+#define PRINTF_FIXED_OVERFLOW    ((fix16_t)(0x8000000))
 #define PRINTF_FIX_MAX_PRECISION (5)
 
 #if (PRINTF_USE_DOUBLE_INTERNALLY || PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS)
@@ -1449,7 +1450,7 @@ static void print_fixed_point(output_gadget_t* output, fix16_t value,
     printf_size_t len = 0U;
 
     // Print overflow
-    if (value == FIXMATH_OVERFLOW)
+    if (value == PRINTF_FIXED_OVERFLOW)
     {
         out_rev_(output, "ovf", 3, width, flags);
         return;
