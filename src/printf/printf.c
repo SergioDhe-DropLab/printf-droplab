@@ -54,7 +54,7 @@
 #include <stdint.h>
 #endif // __cplusplus
 
-#include "fix16.h"
+// #include "fix16.h"
 
 #if PRINTF_ALIAS_STANDARD_FUNCTION_NAMES_HARD
 #define printf_    printf
@@ -110,6 +110,11 @@
 // Default choice of type to use for internal floating-point computations
 #ifndef PRINTF_USE_DOUBLE_INTERNALLY
 #define PRINTF_USE_DOUBLE_INTERNALLY 1
+#endif
+
+// Default choice of type to use for internal floating-point computations
+#ifndef PRINTF_USE_FIXED_POINT
+#define PRINTF_USE_FIXED_POINT (0)
 #endif
 
 // According to the C languages standard, printf() and related functions must be
@@ -729,7 +734,7 @@ static const floating_point_t
                                                             1e15,
                                                             1e16,
                                                             1e17
-#endif
+#endif // PRINTF_MAX_PRECOMPUTED_POWER_OF_10 > 10
 };
 
 // Break up a floating-point number into its base-10 parts: integral - before
@@ -784,7 +789,7 @@ static struct flt_components_t get_flt_components(floating_point_t number,
     return (number_);
 }
 
-#endif // (!PRINTF_USE_FIXED_POINT)
+#else // (!PRINTF_USE_FIXED_POINT)
 
 // Break up a floating-point number - which is known to be a finite non-negative
 // number - into its base-10 parts: integral - before the decimal point, and
@@ -849,6 +854,8 @@ static struct flt_components_t get_fix16_components(fix16_t       number,
     // }
     return (number_);
 }
+
+#endif // (!PRINTF_USE_FIXED_POINT)
 
 #if PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS
 struct scaling_factor
@@ -1432,7 +1439,7 @@ static void print_floating_point(output_gadget_t* output,
         print_decimal_number(output, value, precision, width, flags, buf, len);
 }
 
-#endif // (!PRINTF_USE_FIXED_POINT)
+#else // (!PRINTF_USE_FIXED_POINT)
 
 static void print_fixed_point(output_gadget_t* output, fix16_t value,
                               printf_size_t precision, printf_size_t width,
@@ -1471,6 +1478,8 @@ static void print_fixed_point(output_gadget_t* output, fix16_t value,
 
     print_decimal_fix16(output, value, precision, width, flags, buf, len);
 }
+
+#endif // (!PRINTF_USE_FIXED_POINT)
 
 #endif // (PRINTF_SUPPORT_DECIMAL_SPECIFIERS ||
        // PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS)
