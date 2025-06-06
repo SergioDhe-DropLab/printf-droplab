@@ -819,7 +819,7 @@ static struct flt_components_t get_fix16_components(fix16_t       number,
     uint32_t              scale     = scales[precision & 7];
 
     // fracpart = (uint32_t)fix16_mul((fix16_t)fracpart, (fix16_t)(scale));
-    number_.fractional = (int_fast64_t)(fracpart * scale);
+    number_.fractional = ((int_fast64_t)fracpart * (int_fast64_t)scale);
     uint16_t remainder = (uint16_t)(number_.fractional & 0xFFFFU);
     number_.fractional >>= 16;
 
