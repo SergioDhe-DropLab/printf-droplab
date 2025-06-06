@@ -54,6 +54,8 @@
 #include <stdint.h>
 #endif // __cplusplus
 
+#include "fix16.h"
+
 #if PRINTF_ALIAS_STANDARD_FUNCTION_NAMES_HARD
 #define printf_    printf
 #define sprintf_   sprintf
@@ -259,6 +261,12 @@ typedef double floating_point_t;
 #else
 typedef float    floating_point_t;
 #define FP_TYPE_MANT_DIG FLT_MANT_DIG
+#endif
+
+#if PRINTF_USE_FIXED_POINT
+#ifndef fix16_t
+typedef int32_t fix16_t;
+#endif
 #endif
 
 #define NUM_DECIMAL_DIGITS_IN_INT64_T 18
@@ -477,7 +485,16 @@ static printf_size_t atou_(const char** str)
     return (i);
 }
 
-// output the specified string in reverse, taking care of any zero-padding
+/**
+ * @brief output the specified string in reverse, taking care of any
+ * zero-padding
+ *
+ * @param output Output gadget pointer
+ * @param buf Character buffer
+ * @param len Length???
+ * @param width Width?????
+ * @param flags Flags ????????
+ */
 static void out_rev_(output_gadget_t* output, const char* buf,
                      printf_size_t len, printf_size_t width,
                      printf_flags_t flags)
@@ -1309,6 +1326,24 @@ static void print_floating_point(output_gadget_t* output,
         print_decimal_number(output, value, precision, width, flags, buf, len);
 }
 
+static void print_fixed_point(output_gadget_t* output, fix16_t value,
+                              printf_size_t precision, printf_size_t width,
+                              printf_flags_t flags)
+{
+    // Print overflow
+    if (value == FIXMATH_OVERFLOW)
+    {
+        out_rev_(output, "ovf", 3, width, flags);
+        return;
+    }
+
+    char     buf[PRINTF_DECIMAL_BUFFER_SIZE];
+
+    uint32_t len = fix16_to_str(value, buf, precision);
+
+    out_rev_(output, buf, len, width, flags);
+}
+
 #endif // (PRINTF_SUPPORT_DECIMAL_SPECIFIERS ||
        // PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS)
 
@@ -1622,6 +1657,14 @@ static inline void format_string_loop(output_gadget_t* output,
 #if PRINTF_SUPPORT_DECIMAL_SPECIFIERS
         case 'f':
         case 'F': {
+#if (PRINTF_USE_FIXED_POINT)
+
+            fix16_t value = (fix16_t)(va_arg(args, fix16_t));
+
+            print_fixed_point(output, value, precision, width, flags);
+
+#else // float/double
+
             floating_point_t value =
                 (floating_point_t)(flags & FLAGS_LONG_DOUBLE
                                        ? va_arg(args, long double)
@@ -1630,6 +1673,8 @@ static inline void format_string_loop(output_gadget_t* output,
                 flags |= FLAGS_UPPERCASE;
             print_floating_point(output, value, precision, width, flags,
                                  PRINTF_PREFER_DECIMAL);
+
+#endif
             format++;
             break;
         }
