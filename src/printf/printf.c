@@ -39,7 +39,7 @@
 
 // Define this globally (e.g. gcc -DPRINTF_INCLUDE_CONFIG_H=1 ...) to include
 // the printf_config.h header file
-#if PRINTF_INCLUDE_CONFIG_H
+#ifdef PRINTF_INCLUDE_CONFIG_H
 #include "printf_config.h"
 #endif
 
@@ -803,9 +803,9 @@ static struct flt_components_t get_fix16_components(fix16_t       number,
         number_abs *= (fix16_t)-1;
     }
 
-    uint16_t intpart = (uint32_t)number_abs >> 16U;
+    uint32_t intpart = (uint32_t)number_abs >> 16U;
     intpart &= 0x7FFF;
-    uint16_t fracpart = number_abs & 0xFFFFU;
+    uint32_t fracpart = (uint32_t)number_abs & 0xFFFFU;
 
     /* 5 decimals is enough for full fix16_t precision */
     static const uint32_t scales[6] = {1U, 10U, 100U, 1000U, 10000U, 100000U};
@@ -814,7 +814,7 @@ static struct flt_components_t get_fix16_components(fix16_t       number,
 
     // fracpart = (uint32_t)fix16_mul((fix16_t)fracpart, (fix16_t)(scale));
     number_.fractional = (int_fast64_t)(fracpart * scale);
-    uint16_t remainder = number_.fractional & 0xFFFFU;
+    uint16_t remainder = (uint16_t)(number_.fractional & 0xFFFFU);
     number_.fractional >>= 16;
 
     if (remainder >= 0x8000)
