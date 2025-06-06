@@ -10,7 +10,7 @@ project(
 	VERSION 6.2.0
 )
 
-option(BUILD_TESTS          "Build test programs for the library" OFF)
+option(BUILD_TESTS          "Build test programs for the library" ON)
 option(BUILD_SHARED_LIBS    "Build the library as a shared (dynamically-linked) object rather than a static one " ON)
 
 # Boolean options which go into config.h
@@ -21,6 +21,7 @@ option(SUPPORT_MSVC_STYLE_INTEGER_SPECIFIERS  "Support the I + bit size integer 
 option(SUPPORT_WRITEBACK_SPECIFIER            "Support the length write-back specifier (%n)" ON)
 option(SUPPORT_LONG_LONG                      "Support long long integral types (allows for the ll length modifier and affects %p)" ON)
 option(USE_DOUBLE_INTERNALLY                  "Use the C `double` type - typically 64-bit in size - for internal floating-point arithmetic " ON)
+option(USE_FIXED_POINT                        "Use fixed point arithmetic for floating point operations" OFF)
 option(CHECK_FOR_NUL_IN_FORMAT_SPECIFIER      "Be defensive in the undefined-behavior case of a format specifier not ending before the string ends" ON)
 
 set(ALIASING_MODES NONE HARD SOFT)
@@ -40,6 +41,7 @@ foreach(opt
 	SUPPORT_WRITEBACK_SPECIFIER
 	SUPPORT_LONG_LONG
 	USE_DOUBLE_INTERNALLY
+	USE_FIXED_POINT
 	ALIAS_STANDARD_FUNCTION_NAMES_SOFT
 	ALIAS_STANDARD_FUNCTION_NAMES_HARD
 	CHECK_FOR_NUL_IN_FORMAT_SPECIFIER        

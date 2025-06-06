@@ -83,6 +83,9 @@ typedef SSIZE_T ssize_t;
 #define vprintf   vprintf_
 #endif
 
+#define F16(x)                                                                 \
+    ((fix16_t)(((x) >= 0) ? (((x)*65536.0) + 0.5) : (((x)*65536.0) - 0.5)))
+
 #define CAPTURE_AND_PRINT(printer_, ...)                                       \
     do                                                                         \
     {                                                                          \
@@ -420,6 +423,8 @@ PRINTF_TEST_CASE(brute_force_float)
     char buffer[base_buffer_size];
 #if PRINTF_SUPPORT_DECIMAL_SPECIFIERS
     // brute force float
+
+#if (!PRINTF_USE_FIXED_POINT)
     bool              any_failed = false;
     std::stringstream sstr;
     sstr.precision(5);
@@ -433,11 +438,32 @@ PRINTF_TEST_CASE(brute_force_float)
             std::cerr << ": sprintf_(\"%.5f\", " << std::setw(6) << i
                       << ") = " << std::setw(10) << buffer << " , "
                       << "expected " << std::setw(10) << sstr.str().c_str()
+                      << "reeheehee\n";
+            any_failed = true;
+        }
+    }
+    CHECK(not any_failed);
+#else
+    bool              any_failed = false;
+    std::stringstream sstr;
+    sstr.precision(4);
+    for (float i = -100000; i < 100000; i += (float)1)
+    {
+        sprintf_(buffer, "%.4f", F16(i / 10000.0f));
+        sstr.str("");
+        sstr << std::fixed << i / 10000;
+        if (strcmp(buffer, sstr.str().c_str()) != 0)
+        {
+            std::cerr << ": sprintf_(\"%.4f\", " << std::setw(6) << i
+                      << ") = " << std::setw(10) << buffer << " , "
+                      << "expected " << std::setw(10) << sstr.str().c_str()
                       << "\n";
             any_failed = true;
         }
     }
     CHECK(not any_failed);
+
+#endif // !PRINTF_USE_FIXED_POINT
 
 #if PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS
     // This is tested when _both_ decimal and exponential specifiers are
@@ -466,7 +492,7 @@ PRINTF_TEST_CASE(brute_force_float)
                       << std::setw(18) << std::setprecision(30) << i
                       << ") = " << std::setw(15) << buffer << " , "
                       << "expected " << std::setw(12) << sstr.str().c_str()
-                      << "\n";
+                      << "i am confusion\n";
             any_failed = true;
         }
     }
