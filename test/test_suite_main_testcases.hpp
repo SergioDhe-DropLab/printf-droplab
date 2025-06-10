@@ -1070,12 +1070,12 @@ PRINTF_TEST_CASE(floating_point_specifiers_precision_and_flags)
     PRINTING_CHECK("4.0", ==, sprintf_, buffer, "%.1f", F16(3.999));
     PRINTING_CHECK("4", ==, sprintf_, buffer, "%.0f", F16(3.5));
     PRINTING_CHECK("4", ==, sprintf_, buffer, "%.0f", F16(4.5));
-    PRINTING_CHECK("4.0", ==, sprintf_, buffer, "%.1f", F16(3.05));
-    PRINTING_CHECK("4.0", ==, sprintf_, buffer, "%.1f", F16(4.05));
-    PRINTING_CHECK("4.00", ==, sprintf_, buffer, "%.2f", F16(3.005));
-    PRINTING_CHECK("4.00", ==, sprintf_, buffer, "%.2f", F16(4.005));
-    PRINTING_CHECK("4.000", ==, sprintf_, buffer, "%.3f", F16(3.0005));
-    PRINTING_CHECK("4.000", ==, sprintf_, buffer, "%.3f", F16(4.0005));
+
+    PRINTING_CHECK("0.12", ==, sprintf_, buffer, "%.2f", F16(0.125));
+    PRINTING_CHECK("0.38", ==, sprintf_, buffer, "%.2f", F16(0.375));
+    PRINTING_CHECK("0.62", ==, sprintf_, buffer, "%.2f", F16(0.625));
+    PRINTING_CHECK("0.88", ==, sprintf_, buffer, "%.2f", F16(0.875));
+
     PRINTING_CHECK("3", ==, sprintf_, buffer, "%.0f", F16(3.49));
     PRINTING_CHECK("3.5", ==, sprintf_, buffer, "%.1f", F16(3.49));
     PRINTING_CHECK("a0.5  ", ==, sprintf_, buffer, "a%-5.1f", F16(0.5));
@@ -1349,7 +1349,7 @@ PRINTF_TEST_CASE(misc)
     PRINTING_CHECK("53000atest-20 bit", ==, sprintf_, buffer, "%u%u%ctest%d %s",
                    5, 3000, 'a', -20, mkstr("bit"));
 #if PRINTF_SUPPORT_DECIMAL_SPECIFIERS
-    PRINTING_CHECK("0.33", ==, sprintf_, buffer, "%.*f", 2, 0.33333333);
+    PRINTING_CHECK("0.33", ==, sprintf_, buffer, "%.*f", 2, F16(0.33333333));
     PRINTING_CHECK("1", ==, sprintf_, buffer, "%.*d", -1, 1);
     PRINTING_CHECK("foo", ==, sprintf_, buffer, "%.3s", mkstr("foobar"));
     PRINTING_CHECK(" ", ==, sprintf_, buffer, "% .0d", 0);
@@ -1357,8 +1357,13 @@ PRINTF_TEST_CASE(misc)
     PRINTING_CHECK("hi x", ==, sprintf_, buffer, "%*sx", -3, mkstr("hi"));
     PRINTING_CHECK("00123               ", ==, sprintf_, buffer, "%-20.5i",
                    123);
+#if (!PRINTF_USE_FIXED_POINT)
     PRINTING_CHECK("-67224.546875000000000000", ==, sprintf_, buffer, "%.18f",
                    -67224.546875);
+#else // (!PRINTF_USE_FIXED_POINT)
+    PRINTING_CHECK("-27224.54688", ==, sprintf_, buffer, "%.18f",
+                   F16(-27224.546875));
+#endif
 #endif
 #if PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS
     PRINTING_CHECK("0.33", ==, sprintf_, buffer, "%.*g", 2, 0.33333333);
