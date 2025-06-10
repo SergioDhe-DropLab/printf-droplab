@@ -1,8 +1,12 @@
 // This file is to be included into either test_suite.cpp or another
 // variant of the test suite. It is _not_ self contained in any way
 
+#if PRINTF_USE_FIXED_POINT
 #define F16(x)                                                                 \
     ((fix16_t)(((x) >= 0) ? (((x)*65536.0) + 0.5) : (((x)*65536.0) - 0.5)))
+#else
+#define F16(x) ((x))
+#endif
 
 PRINTF_TEST_CASE(space_flag)
 {
@@ -25,8 +29,6 @@ PRINTF_TEST_CASE(space_flag)
     PRINTING_CHECK(" 1024", ==, sprintf_, buffer, "% i", 1024);
     PRINTING_CHECK("-1024", ==, sprintf_, buffer, "% i", -1024);
 }
-
-#ifdef DONT_TEST_YET
 
 #ifdef TEST_WITH_NON_STANDARD_FORMAT_STRINGS
 
@@ -110,6 +112,8 @@ PRINTF_TEST_CASE(plus_flag__non_standard_format)
 
 #endif
 
+#if (!PRINTF_USE_FIXED_POINT)
+
 PRINTF_TEST_CASE(zero_flag)
 {
     char buffer[base_buffer_size];
@@ -121,12 +125,38 @@ PRINTF_TEST_CASE(zero_flag)
     PRINTING_CHECK("000000000000042", ==, sprintf_, buffer, "%015d", 42);
     PRINTING_CHECK("-00000000000042", ==, sprintf_, buffer, "%015d", -42);
 #if PRINTF_SUPPORT_DECIMAL_SPECIFIERS
-    PRINTING_CHECK("000000000042.12", ==, sprintf_, buffer, "%015.2f", 42.1234);
-    PRINTING_CHECK("00000000042.988", ==, sprintf_, buffer, "%015.3f", 42.9876);
+    PRINTING_CHECK("000000000042.12", ==, sprintf_, buffer, "%015.2f",
+                   (42.1234));
+    PRINTING_CHECK("00000000042.988", ==, sprintf_, buffer, "%015.3f",
+                   (42.9876));
     PRINTING_CHECK("-00000042.98760", ==, sprintf_, buffer, "%015.5f",
-                   -42.9876);
+                   (-42.9876));
 #endif
 }
+
+#else // PRINTF_USE_FIXED_POINT
+
+PRINTF_TEST_CASE(zero_flag)
+{
+    char buffer[base_buffer_size];
+    PRINTING_CHECK("42", ==, sprintf_, buffer, "%0d", 42);
+    PRINTING_CHECK("42", ==, sprintf_, buffer, "%0ld", 42L);
+    PRINTING_CHECK("-42", ==, sprintf_, buffer, "%0d", -42);
+    PRINTING_CHECK("00042", ==, sprintf_, buffer, "%05d", 42);
+    PRINTING_CHECK("-0042", ==, sprintf_, buffer, "%05d", -42);
+    PRINTING_CHECK("000000000000042", ==, sprintf_, buffer, "%015d", 42);
+    PRINTING_CHECK("-00000000000042", ==, sprintf_, buffer, "%015d", -42);
+#if PRINTF_SUPPORT_DECIMAL_SPECIFIERS
+    PRINTING_CHECK("000000000042.12", ==, sprintf_, buffer, "%015.2f",
+                   F16(42.1234));
+    PRINTING_CHECK("00000000042.988", ==, sprintf_, buffer, "%015.3f",
+                   F16(42.9876));
+    PRINTING_CHECK("-000000042.9876", ==, sprintf_, buffer, "%015.4f",
+                   F16(-42.9876));
+#endif
+}
+
+#endif // !PRINTF_USE_FIXED_POINT
 
 PRINTF_TEST_CASE(minus_flag)
 {
@@ -424,10 +454,20 @@ PRINTF_TEST_CASE(width_minus_20)
     PRINTING_CHECK("-1024               ", ==, sprintf_, buffer, "%-20i",
                    -1024);
     PRINTING_CHECK("1024                ", ==, sprintf_, buffer, "%-20u", 1024);
+
 #if PRINTF_SUPPORT_DECIMAL_SPECIFIERS
+#if (!PRINTF_USE_FIXED_POINT)
+
     PRINTING_CHECK("1024.1234           ", ==, sprintf_, buffer, "%-20.4f",
                    1024.1234);
+#else // PRINTF_USE_FIXED_POINT
+
+    PRINTING_CHECK("1024.1234           ", ==, sprintf_, buffer, "%-20.4f",
+                   F16(1024.1234));
+
 #endif
+#endif
+
     PRINTING_CHECK("4294966272          ", ==, sprintf_, buffer, "%-20u",
                    4294966272U);
     PRINTING_CHECK("777                 ", ==, sprintf_, buffer, "%-20o", 511);
@@ -661,9 +701,15 @@ PRINTF_TEST_CASE(float_padding_negative_numbers)
 
     // space padding
 #if PRINTF_SUPPORT_DECIMAL_SPECIFIERS
+#if (!PRINTF_USE_FIXED_POINT)
     PRINTING_CHECK("-5.0", ==, sprintf_, buffer, "% 3.1f", -5.);
     PRINTING_CHECK("-5.0", ==, sprintf_, buffer, "% 4.1f", -5.);
     PRINTING_CHECK(" -5.0", ==, sprintf_, buffer, "% 5.1f", -5.);
+#else // PRINTF_USE_FIXED_POINT
+#endif
+    PRINTING_CHECK("-5.0", ==, sprintf_, buffer, "% 3.1f", F16(-5.));
+    PRINTING_CHECK("-5.0", ==, sprintf_, buffer, "% 4.1f", F16(-5.));
+    PRINTING_CHECK(" -5.0", ==, sprintf_, buffer, "% 5.1f", F16(-5.));
 #endif
 
 #if PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS
@@ -674,14 +720,24 @@ PRINTF_TEST_CASE(float_padding_negative_numbers)
 
     // zero padding
 #if PRINTF_SUPPORT_DECIMAL_SPECIFIERS
-    PRINTING_CHECK("-5.0", ==, sprintf_, buffer, "%03.1f", -5.);
-    PRINTING_CHECK("-5.0", ==, sprintf_, buffer, "%04.1f", -5.);
-    PRINTING_CHECK("-05.0", ==, sprintf_, buffer, "%05.1f", -5.);
-
+#if (!PRINTF_USE_FIXED_POINT)
+    PRINTING_CHECK("-5.0", ==, sprintf_, buffer, "%03.1f", (-5.));
+    PRINTING_CHECK("-5.0", ==, sprintf_, buffer, "%04.1f", (-5.));
+    PRINTING_CHECK("-05.0", ==, sprintf_, buffer, "%05.1f", (-5.));
     // zero padding no decimal point
-    PRINTING_CHECK("-5", ==, sprintf_, buffer, "%01.0f", -5.);
-    PRINTING_CHECK("-5", ==, sprintf_, buffer, "%02.0f", -5.);
-    PRINTING_CHECK("-05", ==, sprintf_, buffer, "%03.0f", -5.);
+    PRINTING_CHECK("-5", ==, sprintf_, buffer, "%01.0f", (-5.));
+    PRINTING_CHECK("-5", ==, sprintf_, buffer, "%02.0f", (-5.));
+    PRINTING_CHECK("-05", ==, sprintf_, buffer, "%03.0f", (-5.));
+#else // PRINTF_USE_FIXED_POINT
+
+    PRINTING_CHECK("-5.0", ==, sprintf_, buffer, "%03.1f", F16(-5.));
+    PRINTING_CHECK("-5.0", ==, sprintf_, buffer, "%04.1f", F16(-5.));
+    PRINTING_CHECK("-05.0", ==, sprintf_, buffer, "%05.1f", F16(-5.));
+    // zero padding no decimal point
+    PRINTING_CHECK("-5", ==, sprintf_, buffer, "%01.0f", F16(-5.));
+    PRINTING_CHECK("-5", ==, sprintf_, buffer, "%02.0f", F16(-5.));
+    PRINTING_CHECK("-05", ==, sprintf_, buffer, "%03.0f", F16(-5.));
+#endif
 #endif
 
 #if PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS
@@ -749,14 +805,15 @@ PRINTF_TEST_CASE(length__non_standard_format)
 
 #endif
 
-#if PRINTF_SUPPORT_DECIMAL_SPECIFIERS || PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS
+#if (PRINTF_SUPPORT_DECIMAL_SPECIFIERS || PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS)
+#if (!PRINTF_USE_FIXED_POINT)
 
 PRINTF_TEST_CASE(infinity_and_not_a_number_values)
 {
     char buffer[base_buffer_size];
 
     // test special-case floats using math.h macros
-#if PRINTF_SUPPORT_DECIMAL_SPECIFIERS
+#if (PRINTF_SUPPORT_DECIMAL_SPECIFIERS && (!PRINTF_USE_FLOATING_POINT))
     PRINTING_CHECK("     nan", ==, sprintf_, buffer, "%8f", (double)NAN);
     PRINTING_CHECK("     inf", ==, sprintf_, buffer, "%8f", (double)INFINITY);
     PRINTING_CHECK("-inf    ", ==, sprintf_, buffer, "%-8f", (double)-INFINITY);
@@ -768,10 +825,11 @@ PRINTF_TEST_CASE(infinity_and_not_a_number_values)
 #endif
 }
 
+#endif // !PRINTF_USE_FIXED_POINT
 #endif // PRINTF_SUPPORT_DECIMAL_SPECIFIERS ||
        // PRINTF_SUPPORT_EXPONENTIAL_SPECIFIERS
 
-#if PRINTF_SUPPORT_DECIMAL_SPECIFIERS
+#if (PRINTF_SUPPORT_DECIMAL_SPECIFIERS && !PRINTF_USE_FIXED_POINT)
 
 PRINTF_TEST_CASE(floating_point_specifiers_with_31_to_32_bit_integer_values)
 {
@@ -847,12 +905,13 @@ PRINTF_TEST_CASE(tiny_floating_point_values)
 
 #endif
 
-#if PRINTF_SUPPORT_DECIMAL_SPECIFIERS
+#if (PRINTF_SUPPORT_DECIMAL_SPECIFIERS && !PRINTF_USE_FIXED_POINT)
 
 PRINTF_TEST_CASE(fallback_from_decimal_to_exponential)
 {
     char buffer[base_buffer_size];
-    CAPTURE_AND_PRINT(sprintf_, buffer, "%.0f", (double)((int64_t)1 * 1000));
+    CAPTURE_AND_PRINT(sprintf_, buffer, "%.0f",
+                      F16((double)((int64_t)1 * 1000)));
     if (PRINTF_MAX_INTEGRAL_DIGITS_FOR_DECIMAL < 3)
     {
         CHECK(!strcmp(buffer, "1e+3"));
@@ -863,7 +922,7 @@ PRINTF_TEST_CASE(fallback_from_decimal_to_exponential)
     }
 
     CAPTURE_AND_PRINT(sprintf_, buffer, "%.0f",
-                      (double)((int64_t)1 * 1000 * 1000));
+                      F16((double)((int64_t)1 * 1000 * 1000)));
     if (PRINTF_MAX_INTEGRAL_DIGITS_FOR_DECIMAL < 6)
     {
         CHECK(!strcmp(buffer, "1e+6"));
@@ -874,7 +933,7 @@ PRINTF_TEST_CASE(fallback_from_decimal_to_exponential)
     }
 
     CAPTURE_AND_PRINT(sprintf_, buffer, "%.0f",
-                      (double)((int64_t)1 * 1000 * 1000 * 1000));
+                      F16((double)((int64_t)1 * 1000 * 1000 * 1000)));
     if (PRINTF_MAX_INTEGRAL_DIGITS_FOR_DECIMAL < 9)
     {
         CHECK(!strcmp(buffer, "1e+9"));
@@ -934,34 +993,36 @@ PRINTF_TEST_CASE(floating_point_specifiers_precision_and_flags)
 
 #if (!PRINTF_USE_FIXED_POINT)
 
-    PRINTING_CHECK("3.1415", ==, sprintf_, buffer, "%.4f", 3.1415354);
-    PRINTING_CHECK("30343.142", ==, sprintf_, buffer, "%.3f", 30343.1415354);
-    PRINTING_CHECK("34", ==, sprintf_, buffer, "%.0f", 34.1415354);
-    PRINTING_CHECK("1", ==, sprintf_, buffer, "%.0f", 1.3);
-    PRINTING_CHECK("2", ==, sprintf_, buffer, "%.0f", 1.55);
-    PRINTING_CHECK("1.6", ==, sprintf_, buffer, "%.1f", 1.64);
-    PRINTING_CHECK("42.90", ==, sprintf_, buffer, "%.2f", 42.8952);
-    PRINTING_CHECK("42.895200000", ==, sprintf_, buffer, "%.9f", 42.8952);
-    PRINTING_CHECK("42.8952230000", ==, sprintf_, buffer, "%.10f", 42.895223);
+    PRINTING_CHECK("3.1415", ==, sprintf_, buffer, "%.4f", F16(3.1415354));
+    PRINTING_CHECK("30343.142", ==, sprintf_, buffer, "%.3f",
+                   F16(30343.1415354));
+    PRINTING_CHECK("34", ==, sprintf_, buffer, "%.0f", F16(34.1415354));
+    PRINTING_CHECK("1", ==, sprintf_, buffer, "%.0f", F16(1.3));
+    PRINTING_CHECK("2", ==, sprintf_, buffer, "%.0f", F16(1.55));
+    PRINTING_CHECK("1.6", ==, sprintf_, buffer, "%.1f", F16(1.64));
+    PRINTING_CHECK("42.90", ==, sprintf_, buffer, "%.2f", F16(42.8952));
+    PRINTING_CHECK("42.895200000", ==, sprintf_, buffer, "%.9f", F16(42.8952));
+    PRINTING_CHECK("42.8952230000", ==, sprintf_, buffer, "%.10f",
+                   F16(42.895223));
     PRINTING_CHECK("42.895223123457", ==, sprintf_, buffer, "%.12f",
                    42.89522312345678);
     PRINTING_CHECK("42477.371093750000000", ==, sprintf_, buffer, "%020.15f",
                    42477.37109375);
     PRINTING_CHECK("42.895223876543", ==, sprintf_, buffer, "%.12f",
                    42.89522387654321);
-    PRINTING_CHECK(" 42.90", ==, sprintf_, buffer, "%6.2f", 42.8952);
+    PRINTING_CHECK(" 42.90", ==, sprintf_, buffer, "%6.2f", F16(42.8952));
     PRINTING_CHECK("+42.90", ==, sprintf_, buffer, "%+6.2f", 42.8952);
     PRINTING_CHECK("+42.9", ==, sprintf_, buffer, "%+5.1f", 42.9252);
     PRINTING_CHECK("42.500000", ==, sprintf_, buffer, "%f", 42.5);
-    PRINTING_CHECK("42.5", ==, sprintf_, buffer, "%.1f", 42.5);
+    PRINTING_CHECK("42.5", ==, sprintf_, buffer, "%.1f", F16(42.5));
     PRINTING_CHECK("42167.000000", ==, sprintf_, buffer, "%f", 42167.0);
     PRINTING_CHECK("-12345.987654321", ==, sprintf_, buffer, "%.9f",
                    -12345.987654321);
-    PRINTING_CHECK("4.0", ==, sprintf_, buffer, "%.1f", 3.999);
-    PRINTING_CHECK("4", ==, sprintf_, buffer, "%.0f", 3.5);
-    PRINTING_CHECK("4", ==, sprintf_, buffer, "%.0f", 4.5);
-    PRINTING_CHECK("3", ==, sprintf_, buffer, "%.0f", 3.49);
-    PRINTING_CHECK("3.5", ==, sprintf_, buffer, "%.1f", 3.49);
+    PRINTING_CHECK("4.0", ==, sprintf_, buffer, "%.1f", F16(3.999));
+    PRINTING_CHECK("4", ==, sprintf_, buffer, "%.0f", F16(3.5));
+    PRINTING_CHECK("4", ==, sprintf_, buffer, "%.0f", F16(4.5));
+    PRINTING_CHECK("3", ==, sprintf_, buffer, "%.0f", F16(3.49));
+    PRINTING_CHECK("3.5", ==, sprintf_, buffer, "%.1f", F16(3.49));
     PRINTING_CHECK("a0.5  ", ==, sprintf_, buffer, "a%-5.1f", 0.5);
     PRINTING_CHECK("a0.5  end", ==, sprintf_, buffer, "a%-5.1fend", 0.5);
 
@@ -983,38 +1044,36 @@ PRINTF_TEST_CASE(floating_point_specifiers_precision_and_flags)
 #else // (!PRINTF_USE_FIXED_POINT)
 
     PRINTING_CHECK("3.1415", ==, sprintf_, buffer, "%.4f", F16(3.1415354));
-    // PRINTING_CHECK("30343.142", ==, sprintf_, buffer, "%.3f",
-    //                F16(30343.1415354));
-    // PRINTING_CHECK("34", ==, sprintf_, buffer, "%.0f", F16(34.1415354));
-    // PRINTING_CHECK("1", ==, sprintf_, buffer, "%.0f", F16(1.3));
-    // PRINTING_CHECK("2", ==, sprintf_, buffer, "%.0f", F16(1.55));
-    // PRINTING_CHECK("1.6", ==, sprintf_, buffer, "%.1f", F16(1.64));
-    // PRINTING_CHECK("42.90", ==, sprintf_, buffer, "%.2f", F16(42.8952));
-    // PRINTING_CHECK("42.895200000", ==, sprintf_, buffer, "%.9f",
-    // F16(42.8952)); PRINTING_CHECK("42.8952230000", ==, sprintf_, buffer,
-    // "%.10f",
-    //                F16(42.895223));
-    // PRINTING_CHECK("42.895223123457", ==, sprintf_, buffer, "%.12f",
-    //                42.89522312345678);
-    // PRINTING_CHECK("42477.371093750000000", ==, sprintf_, buffer, "%020.15f",
-    //                42477.37109375);
-    // PRINTING_CHECK("42.895223876543", ==, sprintf_, buffer, "%.12f",
-    //                42.89522387654321);
-    // PRINTING_CHECK(" 42.90", ==, sprintf_, buffer, "%6.2f", F16(42.8952));
-    // PRINTING_CHECK("+42.90", ==, sprintf_, buffer, "%+6.2f", F16(42.8952));
-    // PRINTING_CHECK("+42.9", ==, sprintf_, buffer, "%+5.1f", F16(42.9252));
-    // PRINTING_CHECK("42.500000", ==, sprintf_, buffer, "%f", 42.5);
-    // PRINTING_CHECK("42.5", ==, sprintf_, buffer, "%.1f", F16(42.5));
-    // PRINTING_CHECK("42167.000000", ==, sprintf_, buffer, "%f", 42167.0);
-    // PRINTING_CHECK("-12345.987654321", ==, sprintf_, buffer, "%.9f",
-    //                -12345.987654321);
-    // PRINTING_CHECK("4.0", ==, sprintf_, buffer, "%.1f", F16(3.999));
-    // PRINTING_CHECK("4", ==, sprintf_, buffer, "%.0f", F16(3.5));
-    // PRINTING_CHECK("4", ==, sprintf_, buffer, "%.0f", F16(4.5));
-    // PRINTING_CHECK("3", ==, sprintf_, buffer, "%.0f", F16(3.49));
-    // PRINTING_CHECK("3.5", ==, sprintf_, buffer, "%.1f", F16(3.49));
-    // PRINTING_CHECK("a0.5  ", ==, sprintf_, buffer, "a%-5.1f", 0.5);
-    // PRINTING_CHECK("a0.5  end", ==, sprintf_, buffer, "a%-5.1fend", 0.5);
+    PRINTING_CHECK("30343.142", ==, sprintf_, buffer, "%.3f",
+                   F16(30343.1415354));
+    PRINTING_CHECK("34", ==, sprintf_, buffer, "%.0f", F16(34.1415354));
+    PRINTING_CHECK("1", ==, sprintf_, buffer, "%.0f", F16(1.3));
+    PRINTING_CHECK("2", ==, sprintf_, buffer, "%.0f", F16(1.55));
+    PRINTING_CHECK("1.6", ==, sprintf_, buffer, "%.1f", F16(1.64));
+    PRINTING_CHECK("42.90", ==, sprintf_, buffer, "%.2f", F16(42.8952));
+    PRINTING_CHECK("42.89520", ==, sprintf_, buffer, "%.9f", F16(42.8952));
+    PRINTING_CHECK("42.89522", ==, sprintf_, buffer, "%.10f", F16(42.895223));
+    PRINTING_CHECK("42.89522", ==, sprintf_, buffer, "%.12f",
+                   F16(42.89522312345678));
+    PRINTING_CHECK("00000000022477.37109", ==, sprintf_, buffer, "%020.15f",
+                   F16(22477.37109375));
+    PRINTING_CHECK("42.89522", ==, sprintf_, buffer, "%.12f",
+                   F16(42.89522387654321));
+    PRINTING_CHECK(" 42.90", ==, sprintf_, buffer, "%6.2f", F16(42.8952));
+    PRINTING_CHECK("+42.90", ==, sprintf_, buffer, "%+6.2f", F16(42.8952));
+    PRINTING_CHECK("+42.9", ==, sprintf_, buffer, "%+5.1f", F16(42.9252));
+    PRINTING_CHECK("42.50000", ==, sprintf_, buffer, "%f", F16(42.5));
+    PRINTING_CHECK("42.5", ==, sprintf_, buffer, "%.1f", F16(42.5));
+    PRINTING_CHECK("22167.00000", ==, sprintf_, buffer, "%f", F16(22167.0));
+    PRINTING_CHECK("-12345.98766", ==, sprintf_, buffer, "%.9f",
+                   F16(-12345.987654321));
+    PRINTING_CHECK("4.0", ==, sprintf_, buffer, "%.1f", F16(3.999));
+    PRINTING_CHECK("4", ==, sprintf_, buffer, "%.0f", F16(3.5));
+    PRINTING_CHECK("4", ==, sprintf_, buffer, "%.0f", F16(4.5));
+    PRINTING_CHECK("3", ==, sprintf_, buffer, "%.0f", F16(3.49));
+    PRINTING_CHECK("3.5", ==, sprintf_, buffer, "%.1f", F16(3.49));
+    PRINTING_CHECK("a0.5  ", ==, sprintf_, buffer, "a%-5.1f", F16(0.5));
+    PRINTING_CHECK("a0.5  end", ==, sprintf_, buffer, "a%-5.1fend", F16(0.5));
 
 #endif
 
@@ -1375,5 +1434,3 @@ PRINTF_TEST_CASE(extremal_unsigned_integer_values)
                    std::numeric_limits<long long unsigned>::max());
 #endif
 }
-
-#endif

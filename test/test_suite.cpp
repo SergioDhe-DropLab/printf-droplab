@@ -428,7 +428,7 @@ PRINTF_TEST_CASE(brute_force_float)
     bool              any_failed = false;
     std::stringstream sstr;
     sstr.precision(5);
-    for (float i = -100000; i < 100000; i += (float)1)
+    for (double i = -100000; i < 100000; i += 1.0)
     {
         sprintf_(buffer, "%.5f", (double)(i / 10000));
         sstr.str("");
@@ -447,9 +447,9 @@ PRINTF_TEST_CASE(brute_force_float)
     bool              any_failed = false;
     std::stringstream sstr;
     sstr.precision(4);
-    for (float i = -100000; i < 100000; i += (float)1)
+    for (double i = -100000; i < 100000; i += 1.0)
     {
-        sprintf_(buffer, "%.4f", F16(i / 10000.0f));
+        sprintf_(buffer, "%.4f", F16(i / 10000.0));
         sstr.str("");
         sstr << std::fixed << i / 10000;
         if (strcmp(buffer, sstr.str().c_str()) != 0)
