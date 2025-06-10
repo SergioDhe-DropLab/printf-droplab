@@ -1070,6 +1070,12 @@ PRINTF_TEST_CASE(floating_point_specifiers_precision_and_flags)
     PRINTING_CHECK("4.0", ==, sprintf_, buffer, "%.1f", F16(3.999));
     PRINTING_CHECK("4", ==, sprintf_, buffer, "%.0f", F16(3.5));
     PRINTING_CHECK("4", ==, sprintf_, buffer, "%.0f", F16(4.5));
+    PRINTING_CHECK("4.0", ==, sprintf_, buffer, "%.1f", F16(3.05));
+    PRINTING_CHECK("4.0", ==, sprintf_, buffer, "%.1f", F16(4.05));
+    PRINTING_CHECK("4.00", ==, sprintf_, buffer, "%.2f", F16(3.005));
+    PRINTING_CHECK("4.00", ==, sprintf_, buffer, "%.2f", F16(4.005));
+    PRINTING_CHECK("4.000", ==, sprintf_, buffer, "%.3f", F16(3.0005));
+    PRINTING_CHECK("4.000", ==, sprintf_, buffer, "%.3f", F16(4.0005));
     PRINTING_CHECK("3", ==, sprintf_, buffer, "%.0f", F16(3.49));
     PRINTING_CHECK("3.5", ==, sprintf_, buffer, "%.1f", F16(3.49));
     PRINTING_CHECK("a0.5  ", ==, sprintf_, buffer, "a%-5.1f", F16(0.5));
