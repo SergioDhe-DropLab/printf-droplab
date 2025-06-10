@@ -837,7 +837,9 @@ static struct flt_components_t get_fix16_components(fix16_t       number,
     else if ((remainder == 0x8000) && (number_.fractional & 1U))
     {
         // Banker's rounding, i.e. round half to even:
-        // 1.5 -> 2, but 2.5 -> 2
+        // 1.125 -> 1.122, but 2.375 -> 2.38
+        // This only applies to remainders that are clean multiples of powers of
+        // 2 when using fixed-point math due to its low precision.
         number_.fractional++;
     }
 
