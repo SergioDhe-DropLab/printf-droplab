@@ -841,18 +841,19 @@ static struct flt_components_t get_fix16_components(fix16_t       number,
         number_.fractional++;
     }
 
+    if (precision == 0U)
+    {
+        remainder = number_abs - (intpart << 16U);
+        if ((remainder == 0x8000) && (intpart & 1U))
+        {
+            // Banker's rounding, i.e. round half to even:
+            // 1.5 -> 2, but 2.5 -> 2
+            intpart++;
+        }
+    }
+
     number_.integral = (int_fast64_t)intpart;
 
-    // if (precision == 0U)
-    // {
-    //     remainder = abs_number - (floating_point_t)number_.integral;
-    //     if ((remainder == one_half) && (number_.integral & 1U))
-    //     {
-    //         // Banker's rounding, i.e. round half to even:
-    //         // 1.5 -> 2, but 2.5 -> 2
-    //         ++number_.integral;
-    //     }
-    // }
     return (number_);
 }
 
