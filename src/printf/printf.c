@@ -823,7 +823,7 @@ static struct flt_components_t get_fix16_components(fix16_t       number,
     uint16_t remainder = (uint16_t)(number_.fractional & 0xFFFFU);
     number_.fractional >>= 16;
 
-    if (remainder >= 0x8000)
+    if (remainder > 0x8000)
     {
         ++number_.fractional;
 
@@ -834,12 +834,12 @@ static struct flt_components_t get_fix16_components(fix16_t       number,
             number_.fractional -= scale;
         }
     }
-    // else if ((remainder == one_half) && (number_.fractional & 1U))
-    // {
-    //     // Banker's rounding, i.e. round half to even:
-    //     // 1.5 -> 2, but 2.5 -> 2
-    //     ++number_.fractional;
-    // }
+    else if ((remainder == 0x8000) && (number_.fractional & 1U))
+    {
+        // Banker's rounding, i.e. round half to even:
+        // 1.5 -> 2, but 2.5 -> 2
+        number_.fractional++;
+    }
 
     number_.integral = (int_fast64_t)intpart;
 
